@@ -366,3 +366,363 @@ def buscar_rutas_entre_ciudades(origen, destino):
     else:
         texto = "\n".join([" → ".join(r) for r in rutas])
         messagebox.showinfo("Rutas Encontradas", texto)
+# ========== FUNCIONES PARA GESTIONAR HORARIOS ========== #
+def gestionar_horarios():
+    """Función para que el admin vea y gestione horarios por ciudad"""
+    ventana = tk.Toplevel()
+    ventana.title("Gestionar Horarios")
+    ventana.geometry("400x300")
+    
+    tk.Label(ventana, text="Seleccione una ciudad:", font=fuente).pack(pady=10)
+    
+    # Lista de ciudades disponibles
+    lista_ciudades = tk.Listbox(ventana, width=40, height=8, font=fuente)
+    for ciudad in rutas_cliente:
+        horarios = ', '.join(rutas_cliente[ciudad]["horarios"])
+        lista_ciudades.insert(tk.END, f"{ciudad} ({horarios})")
+    lista_ciudades.pack(pady=10)
+    
+    frame_botones = tk.Frame(ventana)
+    frame_botones.pack(pady=10)
+    
+    def agregar_horario():
+        seleccion = lista_ciudades.curselection()
+        if not seleccion:
+            messagebox.showwarning("Error", "Seleccione una ciudad")
+            return
+        
+        ciudad = list(rutas_cliente.keys())[seleccion[0]]
+        ventana_agregar_horario(ciudad, ventana)
+        refrescar_lista()
+    
+    def eliminar_horario():
+        seleccion = lista_ciudades.curselection()
+        if not seleccion:
+            messagebox.showwarning("Error", "Seleccione una ciudad")
+            return
+        
+        ciudad = list(rutas_cliente.keys())[seleccion[0]]
+        ventana_eliminar_horario(ciudad, ventana)
+        refrescar_lista()
+    
+    def refrescar_lista():
+        lista_ciudades.delete(0, tk.END)
+        for ciudad in rutas_cliente:
+            horarios = ', '.join(rutas_cliente[ciudad]["horarios"])
+            lista_ciudades.insert(tk.END, f"{ciudad} ({horarios})")
+    
+    tk.Button(frame_botones, text="Agregar Horario", command=agregar_horario, font=fuente).pack(side=tk.LEFT, padx=5)
+    tk.Button(frame_botones, text="Eliminar Horario", command=eliminar_horario, font=fuente).pack(side=tk.LEFT, padx=5)
+    tk.Button(frame_botones, text="Refrescar", command=refrescar_lista, font=fuente).pack(side=tk.LEFT, padx=5)
+
+def ventana_agregar_horario(ciudad, ventana_padre):
+    """Ventana para agregar un nuevo horario a una ciudad"""
+    ventana = tk.Toplevel(ventana_padre)
+    ventana.title(f"Agregar Horario - {ciudad}")
+    ventana.geometry("300x200")
+    
+    tk.Label(ventana, text=f"Ciudad: {ciudad}", font=("Times New Roman", 12)).pack(pady=10)
+    tk.Label(ventana, text="Nuevo horario:", font=fuente).pack()
+    
+    entry_horario = tk.Entry(ventana, width=15, font=fuente)
+    entry_horario.pack(pady=5)
+    
+    tk.Label(ventana, text="Formato: HH:MM (ej: 14:30)", font=("Times New Roman", 8), fg="gray").pack()
+    
+    def guardar_horario():
+        horario = entry_horario.get().strip()
+        
+        if not horario:
+            messagebox.showerror("Error", "Ingrese un horario")
+            return
+        
+        # Validar formato básico
+        if len(horario) != 5 or horario[2] != ':':
+            messagebox.showerror("Error", "Formato incorrecto. Use HH:MM")
+            return
+        
+        try:
+            horas, minutos = horario.split(':')
+            if not (0 <= int(horas) <= 23 and 0 <= int(minutos) <= 59):
+                raise ValueError
+        except:
+            messagebox.showerror("Error", "Horario inválido")
+            return
+        
+        # Verificar si ya existe
+        if horario in rutas_cliente[ciudad]["horarios"]:
+            messagebox.showerror("Error", "El horario ya existe")
+            return
+        
+        # Agregar horario
+        rutas_cliente[ciudad]["horarios"].append(horario)
+        rutas_cliente[ciudad]["horarios"].sort()  # Ordenar horarios
+        
+        # Crear asientos para todas las rutas que involucren esta ciudad
+        crear_asientos_nuevo_horario(ciudad, horario)
+        
+        messagebox.showinfo("Éxito", f"Horario {horario} agregado a {ciudad}")
+        ventana.destroy()
+    
+    tk.Button(ventana, text="Guardar", command=guardar_horario, font=fuente).pack(pady=15)
+
+def ventana_eliminar_horario(ciudad, ventana_padre):
+    """Ventana para eliminar un horario de una ciudad"""
+    ventana = tk.Toplevel(ventana_padre)
+    ventana.title(f"Eliminar Horario - {ciudad}")
+    ventana.geometry("300x250")
+    
+    tk.Label(ventana, text=f"Ciudad: {ciudad}", font=("Times New Roman", 12)).pack(pady=10)
+    tk.Label(ventana, text="Seleccione horario a eliminar:", font=fuente).pack()
+    
+    lista_horarios = tk.Listbox(ventana, width=25, height=6, font=fuente)
+    for horario in rutas_cliente[ciudad]["horarios"]:
+        lista_horarios.insert(tk.END, horario)
+    lista_horarios.pack(pady=10)
+    
+    def eliminar():
+        seleccion = lista_horarios.curselection()
+        if not seleccion:
+            messagebox.showwarning("Error", "Seleccione un horario")
+            return
+        
+        horario = lista_horarios.get(seleccion[0])
+        
+        # Verificar que no sea el último horario
+        if len(rutas_cliente[ciudad]["horarios"]) <= 1:
+            messagebox.showerror("Error", "No puede eliminar el último horario")
+            return
+        
+        # Confirmar eliminación
+        respuesta = messagebox.askyesno("Confirmar", f"¿Eliminar horario {horario}?\n\nSe perderán todos los asientos vendidos en este horario.")
+        if not respuesta:
+            return
+        
+        # Eliminar horario
+        rutas_cliente[ciudad]["horarios"].remove(horario)
+        
+        # Eliminar asientos asociados
+        eliminar_asientos_horario(ciudad, horario)
+        
+        messagebox.showinfo("Éxito", f"Horario {horario} eliminado de {ciudad}")
+        ventana.destroy()
+    
+    tk.Button(ventana, text="Eliminar", command=eliminar, font=fuente, bg="red", fg="white").pack(pady=10)
+
+def crear_asientos_nuevo_horario(ciudad, horario):
+    """Crea asientos para un nuevo horario en todas las rutas que involucren la ciudad"""
+    # Para rutas donde la ciudad es origen
+    if ciudad in rutas_matriz:
+        for destino in rutas_matriz[ciudad]:
+            clave = f"{ciudad}-{destino}-{horario}"
+            if clave not in asientos_por_ruta:
+                asientos_por_ruta[clave] = generar_matriz_asientos()
+    
+    # Para rutas donde la ciudad es destino
+    for origen in rutas_matriz:
+        if ciudad in rutas_matriz[origen]:
+            clave = f"{origen}-{ciudad}-{horario}"
+            if clave not in asientos_por_ruta:
+                asientos_por_ruta[clave] = generar_matriz_asientos()
+
+def eliminar_asientos_horario(ciudad, horario):
+    """Elimina todos los asientos asociados a un horario específico"""
+    claves_a_eliminar = []
+    
+    for clave in list(asientos_por_ruta.keys()):
+        if horario in clave and ciudad in clave:
+            claves_a_eliminar.append(clave)
+    
+    for clave in claves_a_eliminar:
+        del asientos_por_ruta[clave]
+
+def ver_todos_horarios():
+    """Función para ver todos los horarios por ciudad"""
+    if not rutas_cliente:
+        messagebox.showinfo("Horarios", "No hay ciudades registradas")
+        return
+    
+    texto = "HORARIOS POR CIUDAD:\n\n"
+    for ciudad, datos in rutas_cliente.items():
+        horarios = ', '.join(sorted(datos['horarios']))
+        cooperativa = datos['cooperativa']
+        precio = datos['precio']
+        texto += f"{ciudad}\n"
+        texto += f"   Cooperativa: {cooperativa}\n"
+        texto += f"   Precio: ${precio}\n"
+        texto += f"   Horarios: {horarios}\n\n"
+    
+    messagebox.showinfo("Todos los Horarios", texto)
+
+def agregar_cooperativa():
+    """Función para que el admin agregue nuevas cooperativas"""
+    ventana = tk.Toplevel()
+    ventana.title("Agregar Cooperativa")
+    ventana.geometry("400x300")
+    
+    tk.Label(ventana, text="Nombre de la Cooperativa:", font=fuente).pack(pady=5)
+    entry_nombre = tk.Entry(ventana, width=40, font=fuente)
+    entry_nombre.pack(pady=5)
+    
+    tk.Label(ventana, text="Ciudades que cubre (separadas por comas):", font=fuente).pack(pady=5)
+    entry_ciudades = tk.Entry(ventana, width=40, font=fuente)
+    entry_ciudades.pack(pady=5)
+    
+    tk.Label(ventana, text="Ejemplo: Quito, Guayaquil, Cuenca", font=("Times New Roman", 8), fg="gray").pack()
+
+    def guardar_cooperativa():
+        nombre = entry_nombre.get().strip()
+        ciudades_str = entry_ciudades.get().strip()
+        
+        if not nombre or not ciudades_str:
+            messagebox.showerror("Error", "Todos los campos son obligatorios")
+            return
+        
+        if nombre in cooperativas:
+            messagebox.showerror("Error", "La cooperativa ya existe")
+            return
+        
+        # Procesar ciudades
+        ciudades = [ciudad.strip() for ciudad in ciudades_str.split(",")]
+        ciudades = [ciudad for ciudad in ciudades if ciudad]  # Filtrar vacíos
+        
+        if not ciudades:
+            messagebox.showerror("Error", "Debe ingresar al menos una ciudad")
+            return
+        
+        # Verificar que las ciudades existan en el sistema
+        ciudades_no_existentes = [ciudad for ciudad in ciudades if ciudad not in rutas_matriz]
+        if ciudades_no_existentes:
+            messagebox.showerror("Error", f"Las siguientes ciudades no existen en el sistema: {', '.join(ciudades_no_existentes)}")
+            return
+        
+        cooperativas[nombre] = ciudades
+        guardar_todos_datos_en_json()
+        messagebox.showinfo("Éxito", f"Cooperativa '{nombre}' agregada correctamente")
+        ventana.destroy()
+
+    tk.Button(ventana, text="Guardar Cooperativa", command=guardar_cooperativa, font=fuente).pack(pady=15)
+
+def ver_cooperativas():
+    """Función para ver todas las cooperativas registradas"""
+    if not cooperativas:
+        messagebox.showinfo("Cooperativas", "No hay cooperativas registradas")
+        return
+    
+    texto = ""
+    for coop, ciudades in cooperativas.items():
+        texto += f"{coop}: {', '.join(ciudades)}\n"
+    
+    messagebox.showinfo("Cooperativas Registradas", texto)
+
+def gestionar_asientos_ruta():
+    """Función para que el admin vea y modifique asientos por ruta y horario"""
+    ventana = tk.Toplevel()
+    ventana.title("Gestionar Asientos por Ruta")
+    ventana.geometry("350x250")
+    
+    tk.Label(ventana, text="Ciudad Origen:", font=fuente).pack()
+    entry_origen = tk.Entry(ventana, font=fuente)
+    entry_origen.pack()
+    
+    tk.Label(ventana, text="Ciudad Destino:", font=fuente).pack()
+    entry_destino = tk.Entry(ventana, font=fuente)
+    entry_destino.pack()
+    
+    tk.Label(ventana, text="Horario:", font=fuente).pack()
+    entry_horario = tk.Entry(ventana, font=fuente)
+    entry_horario.pack()
+    
+    tk.Label(ventana, text="Ejemplo: 08:00", font=("Times New Roman", 8), fg="gray").pack()
+
+    def mostrar_asientos():
+        origen = entry_origen.get().strip()
+        destino = entry_destino.get().strip()
+        horario = entry_horario.get().strip()
+        
+        if not origen or not destino or not horario:
+            messagebox.showerror("Error", "Todos los campos son obligatorios")
+            return
+        
+        if origen not in rutas_matriz or destino not in rutas_matriz.get(origen, {}):
+            messagebox.showerror("Error", "La ruta no existe")
+            return
+        
+        ventana.destroy()
+        mostrar_matriz_asientos_admin(origen, destino, horario)
+
+    tk.Button(ventana, text="Ver Asientos", command=mostrar_asientos, font=fuente).pack(pady=10)
+
+def mostrar_matriz_asientos_admin(origen, destino, horario):
+    """Muestra la matriz de asientos para administrador con opción de liberar asientos"""
+    clave_ruta = f"{origen}-{destino}-{horario}"
+    if clave_ruta not in asientos_por_ruta:
+        asientos_por_ruta[clave_ruta] = generar_matriz_asientos()
+    
+    ventana = tk.Toplevel()
+    ventana.title(f"Asientos: {origen} → {destino} - {horario}")
+    ventana.geometry("500x500")
+    
+    tk.Label(ventana, text=f"Bus: {origen} → {destino}", font=("Times New Roman", 12)).pack(pady=5)
+    tk.Label(ventana, text=f"Horario: {horario}", font=("Times New Roman", 10)).pack(pady=5)
+    
+    frame_asientos = tk.Frame(ventana)
+    frame_asientos.pack()
+    
+    # Crear botones para cada asiento
+    for fila in range(4):
+        for columna in range(4):
+            estado = "ocupado" if asientos_por_ruta[clave_ruta][fila][columna] else "libre"
+            bg_color = "red" if estado == "ocupado" else "green"
+            
+            def toggle_asiento(f=fila, c=columna):
+                # Cambiar estado del asiento
+                asientos_por_ruta[clave_ruta][f][c] = not asientos_por_ruta[clave_ruta][f][c]
+                ventana.destroy()
+                mostrar_matriz_asientos_admin(origen, destino, horario)  # Refrescar vista
+            
+            boton = tk.Button(
+                frame_asientos,
+                text=f"F{fila+1}C{columna+1}\n({estado})",
+                width=8,
+                height=3,
+                bg=bg_color,
+                command=toggle_asiento
+            )
+            boton.grid(row=fila, column=columna, padx=5, pady=5)
+    
+    # Botón para resetear todos los asientos
+    def resetear_asientos():
+        asientos_por_ruta[clave_ruta] = generar_matriz_asientos()
+        messagebox.showinfo("Éxito", "Todos los asientos han sido liberados")
+        ventana.destroy()
+        mostrar_matriz_asientos_admin(origen, destino, horario)
+    
+    tk.Button(ventana, text="Liberar Todos los Asientos", command=resetear_asientos, font=fuente, bg="orange").pack(pady=10)
+    
+    # Información adicional
+    ocupados = sum(sum(fila) for fila in asientos_por_ruta[clave_ruta])
+    libres = 16 - ocupados
+    tk.Label(ventana, text=f"Asientos ocupados: {ocupados} | Asientos libres: {libres}", font=fuente).pack(pady=5)
+
+def ver_estado_todos_asientos():
+    """Función para ver el estado de asientos de todas las rutas y horarios"""
+    if not asientos_por_ruta:
+        messagebox.showinfo("Estado de Asientos", "No hay rutas con asientos configurados")
+        return
+    
+    texto = "ESTADO DE ASIENTOS POR BUS (RUTA + HORARIO):\n\n"
+    for ruta_horario, matriz in asientos_por_ruta.items():
+        ocupados = sum(sum(fila) for fila in matriz)
+        libres = 16 - ocupados
+        # Separar ruta de horario para mejor presentación
+        partes = ruta_horario.split('-')
+        if len(partes) >= 3:
+            origen = partes[0]
+            destino = partes[1] 
+            horario = '-'.join(partes[2:])  # Por si el horario tiene guiones
+            texto += f"{origen} → {destino} ({horario}): {ocupados}/16 ocupados, {libres}/16 libres\n"
+        else:
+            texto += f"{ruta_horario}: {ocupados}/16 ocupados, {libres}/16 libres\n"
+    
+    messagebox.showinfo("Estado General de Asientos", texto)

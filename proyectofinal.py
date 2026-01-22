@@ -977,3 +977,546 @@ def ver_facturas():
         for f in facturas
     )
     messagebox.showinfo("Historial de Facturas", texto)
+    
+# ========== MÓDULO CLIENTE ========== #
+def registrar_cliente(nombre, cedula, password):
+    """
+    Registra un cliente en la lista 'clientes' si la cédula es válida y no existe.
+    Ahora también guarda la contraseña.
+    Retorna:
+      - None => cédula inválida
+      - False => nombre inválido
+      - "existe" => cédula ya registrada
+      - [nombre, cedula, password] => cliente registrado o ya existente
+    """
+    if not validar_cedula_ecuador(cedula):
+        return None
+    if not nombre_valido(nombre):
+        return False
+    for c in clientes:
+        if c[1] == cedula:
+            return "existe"
+    clientes.append([nombre, cedula, password])
+    return [nombre, cedula, password]
+
+def generar_boleto(cliente, destino, cooperativa, horario):
+    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    boleto = [cliente[0], cliente[1], destino[0], destino[1], cooperativa, horario, fecha]
+    boletos.append(boleto)
+    guardar_factura_json(cliente[0], destino[0], destino[1], fecha)
+    return boleto
+
+def ventana_cliente_login():
+    """
+    Ventana principal de cliente — ahora con opción de:
+      - Iniciar sesión (usuario y contraseña)
+      - Registrar cuenta (nombre, cédula, contraseña)
+    Por ahora los usuarios se guardan en la lista 'usuarios'.
+    """
+    win = tk.Tk()
+    win.title("Login Cliente - Terminal de Buses")
+    win.geometry("550x500")
+    win.config(bg=COLOR_FONDO)
+    
+    # Header
+    frame_header = tk.Frame(win, bg=COLOR_SECUNDARIO, height=80)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    tk.Label(frame_header, text="LOGIN CLIENTE", font=("Arial", 18, "bold"), bg=COLOR_SECUNDARIO, fg=COLOR_TEXTO).pack(pady=20)
+    
+    # Contenido
+    frame = tk.Frame(win, bg=COLOR_FONDO)
+    frame.pack(pady=30, padx=40, fill=tk.BOTH, expand=True)
+    
+    # Nombre de usuario
+    tk.Label(frame, text="Correo / Usuario (opcional):", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(10, 5))
+    entry_user = tk.Entry(frame, font=fuente, bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=40, relief=tk.FLAT, bd=5)
+    entry_user.pack(pady=5, fill=tk.X)
+    
+    # Cedula
+    tk.Label(frame, text="Cedula (10 digitos):", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(15, 5))
+    entry_cedula = tk.Entry(frame, font=fuente, bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=40, relief=tk.FLAT, bd=5)
+    entry_cedula.pack(pady=5, fill=tk.X)
+    
+    # Contrasena
+    tk.Label(frame, text="Contrasena:", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(15, 5))
+    entry_pass = tk.Entry(frame, font=fuente, show="•", bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=40, relief=tk.FLAT, bd=5)
+    entry_pass.pack(pady=5, fill=tk.X)
+    
+    def intentar_login():
+        cedula = entry_cedula.get().strip()
+        password = entry_pass.get().strip()
+        if not cedula or not password:
+            messagebox.showerror("Error", "Cédula y contraseña son obligatorias")
+            return
+        # Validar contra clientes (que incluye contraseña)
+        for c in clientes:
+            if c[1] == cedula and len(c) > 2 and c[2] == password:
+                win.destroy()
+                abrir_menu_cliente(c[0], c[1])
+                return
+        messagebox.showerror("Error", "Credenciales incorrectas o usuario no registrado")
+    
+    def ventana_registrar():
+        vr = tk.Toplevel(win)
+        vr.title("Registrar Cuenta - Terminal de Buses")
+        vr.geometry("500x450")
+        vr.config(bg=COLOR_FONDO)
+        
+        # Header
+        frame_header_reg = tk.Frame(vr, bg=COLOR_PRIMARIO_CLARO, height=70)
+        frame_header_reg.pack(fill=tk.X)
+        frame_header_reg.pack_propagate(False)
+        tk.Label(frame_header_reg, text="REGISTRAR CUENTA", font=("Arial", 18, "bold"), bg=COLOR_PRIMARIO_CLARO, fg=COLOR_TEXTO).pack(pady=18)
+        
+        frame_form = tk.Frame(vr, bg=COLOR_FONDO)
+        frame_form.pack(pady=20, padx=30, fill=tk.BOTH, expand=True)
+        
+        tk.Label(frame_form, text="Nombre completo:", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(10, 5))
+        en_nombre = tk.Entry(frame_form, font=fuente, bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=35, relief=tk.FLAT, bd=5)
+        en_nombre.pack(pady=5, fill=tk.X)
+        
+        tk.Label(frame_form, text="Cedula (10 digitos):", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(15, 5))
+        en_ced = tk.Entry(frame_form, font=fuente, bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=35, relief=tk.FLAT, bd=5)
+        en_ced.pack(pady=5, fill=tk.X)
+        
+        tk.Label(frame_form, text="Contrasena (min 4 caracteres):", font=("Arial", 10, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(15, 5))
+        en_pass = tk.Entry(frame_form, font=fuente, show="•", bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, width=35, relief=tk.FLAT, bd=5)
+        en_pass.pack(pady=5, fill=tk.X)
+        
+        def guardar_registro():
+            nombre = en_nombre.get().strip()
+            ced = en_ced.get().strip()
+            pwd = en_pass.get().strip()
+            if not nombre_valido(nombre):
+                messagebox.showerror("Error", "Nombre inválido")
+                return
+            if not validar_cedula_ecuador(ced):
+                messagebox.showerror("Error", "Cédula inválida")
+                return
+            if len(pwd) < 4:
+                messagebox.showerror("Error", "Contraseña demasiado corta")
+                return
+            # Verificar si cedula ya en usuarios
+            for u in usuarios:
+                if u[1] == ced:
+                    messagebox.showerror("Error", "Ya existe un usuario con esa cédula")
+                    return
+            # Agregar usuario a lista (temporal, en memoria)
+            usuarios.append([nombre, ced, pwd])
+            # También agregar a lista 'clientes' con contraseña
+            res = registrar_cliente(nombre, ced, pwd)
+            # Guardar todos los datos en JSON
+            guardar_todos_datos_en_json()
+            # Notificar y cerrar
+            messagebox.showinfo("Éxito", "Cuenta registrada correctamente")
+            vr.destroy()
+        
+        tk.Button(vr, text="Registrar", command=guardar_registro, font=fuente).pack(pady=10)
+    
+    tk.Button(frame, text="Iniciar Sesión", command=intentar_login, font=fuente, width=20).pack(pady=8)
+    tk.Button(frame, text="Registrar Cuenta", command=ventana_registrar, font=fuente, width=20).pack(pady=4)
+    tk.Button(frame, text="Buscar Historial", command=ventana_buscar_historial, font=fuente, width=20).pack(pady=4)
+
+def ver_cooperativa_cliente():
+    """Función para mostrar cooperativas al cliente"""
+    if not cooperativas:
+        messagebox.showinfo("Cooperativas", "No hay cooperativas registradas")
+        return
+    
+    texto = "COOPERATIVAS DISPONIBLES:\n\n"
+    for coop, ciudades in cooperativas.items():
+        texto += f"{coop}\n"
+        texto += f"  Ciudades: {', '.join(ciudades)}\n\n"
+    
+    messagebox.showinfo("Cooperativas Disponibles", texto)
+
+def abrir_menu_cliente(nombre, cedula):
+    win = tk.Tk()
+    win.title(f"👤 {nombre} - Terminal de Buses")
+    win.geometry("650x750")
+    win.config(bg=COLOR_FONDO)
+    
+    # Header con bienvenida
+    frame_header = tk.Frame(win, bg=COLOR_SECUNDARIO, height=100)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    tk.Label(frame_header, text=f"Bienvenido, {nombre.upper()}", font=("Arial", 16, "bold"), bg=COLOR_SECUNDARIO, fg=COLOR_TEXTO).pack(pady=8)
+    tk.Label(frame_header, text=f"Cédula: {cedula}", font=("Arial", 9), bg=COLOR_SECUNDARIO, fg=COLOR_TEXTO_SECUNDARIO).pack(pady=2)
+    
+    # Línea decorativa
+    frame_linea = tk.Frame(win, bg=COLOR_ACENTO, height=2)
+    frame_linea.pack(fill=tk.X, pady=5)
+    frame_linea.pack_propagate(False)
+    
+    # Canvas con Scrollbar para el menú
+    canvas = tk.Canvas(win, bg=COLOR_FONDO, highlightthickness=0)
+    scrollbar = tk.Scrollbar(win, orient=tk.VERTICAL, command=canvas.yview)
+    frame = tk.Frame(canvas, bg=COLOR_FONDO)
+    frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    canvas.create_window((0, 0), window=frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    # Permitir scroll con rueda del mouse
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+    
+    tk.Label(frame, text="📋 MIS OPCIONES", font=("Arial", 12, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=10)
+    
+    botones = [
+        ("🗺️  Ver Destinos", ver_destinos, COLOR_PRIMARIO),
+        ("⏰ Ver Horarios", ver_horarios, COLOR_PRIMARIO),
+        ("🚌 Ver Cooperativas", ver_cooperativa_cliente, COLOR_PRIMARIO),
+        ("💰 Ver Rutas Más Baratas", lambda: mostrar_rutas_por_tipo("barata", "Rutas Más Baratas"), COLOR_PRIMARIO_CLARO),
+        ("⏱️  Ver Rutas Más Cortas", lambda: mostrar_rutas_por_tipo("corta", "Rutas Más Cortas"), COLOR_PRIMARIO_CLARO),
+        ("📏 Ver Rutas Más Largas", lambda: mostrar_rutas_por_tipo("larga", "Rutas Más Largas"), COLOR_PRIMARIO_CLARO),
+        ("🔍 Buscar Rutas entre Ciudades", lambda: buscar_ruta_cliente(), COLOR_SECUNDARIO),
+        ("🎫 COMPRAR BOLETO", lambda: comprar_boleto_ui(nombre, cedula, win), COLOR_EXITO),
+        ("📖 Ver Mi Historial", lambda: ver_historial(cedula), COLOR_SECUNDARIO),
+        ("🚪 Cerrar Sesión", lambda: [win.destroy(), ventana_principal()], "#555555")
+    ]
+    
+    for texto, comando, color in botones:
+        btn = tk.Button(
+            frame, 
+            text=texto, 
+            width=40,
+            command=comando, 
+            font=("Arial", 10, "bold") if "COMPRAR" in texto else ("Arial", 9),
+            bg=color,
+            fg=COLOR_TEXTO,
+            relief=tk.RAISED,
+            bd=2,
+            padx=10,
+            pady=10 if "COMPRAR" in texto else 8,
+            activebackground=COLOR_ACENTO,
+            activeforeground=COLOR_FONDO,
+            cursor="hand2"
+        )
+        btn.pack(pady=6, anchor="center")
+
+    # Footer
+    frame_footer = tk.Frame(win, bg=COLOR_PRIMARIO, height=50)
+    frame_footer.pack(fill=tk.X, side=tk.BOTTOM)
+    frame_footer.pack_propagate(False)
+    tk.Label(frame_footer, text="Viaja seguro, viaja con nosotros", font=("Arial", 9), bg=COLOR_PRIMARIO, fg=COLOR_TEXTO).pack(pady=15)
+
+def buscar_ruta_cliente():
+    ventana = tk.Toplevel()
+    ventana.title("Buscar Ruta")
+    ventana.geometry("300x200")
+    
+    tk.Label(ventana, text="Ciudad Origen:", font=fuente).pack()
+    entry_origen = tk.Entry(ventana, font=fuente)
+    entry_origen.pack()
+    
+    tk.Label(ventana, text="Ciudad Destino:", font=fuente).pack()
+    entry_destino = tk.Entry(ventana, font=fuente)
+    entry_destino.pack()
+
+    def buscar():
+        origen = entry_origen.get().strip()
+        destino = entry_destino.get().strip()
+        if not origen or not destino:
+            messagebox.showerror("Error", "Ambos campos son obligatorios")
+            return
+        
+        buscar_rutas_entre_ciudades(origen, destino)
+        ventana.destroy()
+
+    tk.Button(ventana, text="Buscar", command=buscar, font=fuente).pack(pady=10)
+
+def ver_destinos():
+    texto = "\n".join(f"{d} - ${r['precio']}" for d, r in rutas_cliente.items())
+    messagebox.showinfo("Destinos", texto)
+
+def ver_horarios():
+    texto = "\n".join(
+        f"{d}: {', '.join(r['horarios'])}" 
+        for d, r in rutas_cliente.items()
+    )
+    messagebox.showinfo("Horarios", texto)
+
+def comprar_boleto_ui(nombre, cedula, ventana_padre):
+    win = tk.Toplevel(ventana_padre)
+    win.title("Comprar Boleto - Terminal de Buses")
+    win.geometry("550x600")
+    win.config(bg=COLOR_FONDO)
+    
+    # Header
+    frame_header = tk.Frame(win, bg=COLOR_SECUNDARIO, height=80)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    tk.Label(frame_header, text="COMPRAR BOLETO", font=("Arial", 16, "bold"), bg=COLOR_SECUNDARIO, fg=COLOR_TEXTO).pack(pady=8)
+    
+    # Línea decorativa
+    frame_linea = tk.Frame(win, bg=COLOR_ACENTO, height=2)
+    frame_linea.pack(fill=tk.X, pady=5)
+    frame_linea.pack_propagate(False)
+    
+    # Paso 1: Seleccionar destino
+    frame_destino = tk.Frame(win, bg=COLOR_FONDO)
+    frame_destino.pack(pady=15, padx=20, fill=tk.BOTH, expand=True)
+    
+    tk.Label(frame_destino, text="Seleccione su destino:", font=("Arial", 11, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=10)
+    lista_destinos = tk.Listbox(frame_destino, width=40, height=10, font=("Arial", 10), bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, relief=tk.FLAT, bd=3)
+    for destino in rutas_cliente:
+        lista_destinos.insert(tk.END, f"  {destino}")
+    lista_destinos.pack(pady=10, fill=tk.BOTH, expand=True)
+    
+    def siguiente_paso():
+        seleccion = lista_destinos.curselection()
+        if not seleccion:
+            messagebox.showwarning("Error", "Seleccione un destino")
+            return
+        
+        destino_text = lista_destinos.get(seleccion[0]).replace("  ", "")
+        datos = rutas_cliente[destino_text]
+        
+        # Paso 2: Seleccionar horario
+        frame_destino.pack_forget()
+        
+        frame_horario = tk.Frame(win, bg=COLOR_FONDO)
+        frame_horario.pack(pady=15, padx=20, fill=tk.BOTH, expand=True)
+        
+        tk.Label(frame_horario, text=f"Destino: {destino_text}", font=("Arial", 12, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=8)
+        tk.Label(frame_horario, text=f"Precio: ${datos['precio']}", font=("Arial", 11, "bold"), bg=COLOR_FONDO, fg=COLOR_EXITO).pack(anchor=tk.W, pady=5)
+        tk.Label(frame_horario, text=f"Cooperativa: {datos['cooperativa']}", font=("Arial", 10), bg=COLOR_FONDO, fg=COLOR_TEXTO_SECUNDARIO).pack(anchor=tk.W, pady=5)
+        
+        tk.Label(frame_horario, text="Horarios disponibles:", font=("Arial", 11, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(15, 10))
+        
+        lista_horarios = tk.Listbox(frame_horario, width=40, height=6, font=("Arial", 10), bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, relief=tk.FLAT, bd=3)
+        for h in datos["horarios"]:
+            lista_horarios.insert(tk.END, f"  {h}")
+        lista_horarios.pack(pady=10, fill=tk.BOTH, expand=True)
+        
+        def confirmar_compra():
+            seleccion = lista_horarios.curselection()
+            if not seleccion:
+                messagebox.showwarning("Error", "Seleccione un horario")
+                return
+            
+            horario = lista_horarios.get(seleccion[0]).replace("  ", "")
+            
+            # Paso 3: Seleccionar asiento
+            frame_horario.pack_forget()
+            
+            origen = next((origen for origen, destinos in cooperativas.items() if destino_text in destinos), "Quito")
+            
+            asiento = seleccionar_asiento(origen, destino_text, horario)
+            if not asiento:
+                messagebox.showwarning("Error", "Debe seleccionar un asiento")
+                return
+            
+            fila, columna = asiento
+            asientos_por_ruta[f"{origen}-{destino_text}-{horario}"][fila][columna] = True
+            
+            boleto = generar_boleto(
+                [nombre, cedula],
+                [destino_text, datos["precio"]],
+                datos["cooperativa"],
+                horario
+            )
+            
+            # Guardar todos los datos del sistema en JSON
+            guardar_todos_datos_en_json()
+            
+            factura = (
+                f"BOLETO CONFIRMADO!\n"
+                f"═════════════════════════\n"
+                f"Pasajero: {nombre}\n"
+                f"Cedula: {cedula}\n"
+                f"─────────────────────────\n"
+                f"Destino: {destino_text}\n"
+                f"Precio: ${datos['precio']}\n"
+                f"Cooperativa: {datos['cooperativa']}\n"
+                f"Horario: {horario}\n"
+                f"Asiento: Fila {fila+1} - Columna {columna+1}\n"
+                f"Fecha: {boleto[6]}\n"
+                f"═════════════════════════\n"
+                f"Buen viaje!"
+            )
+            
+            messagebox.showinfo("COMPRA EXITOSA!", factura)
+            win.destroy()
+        
+        btn_confirmar = tk.Button(
+            frame_horario, 
+            text="✅ CONFIRMAR COMPRA", 
+            command=confirmar_compra, 
+            font=("Arial", 11, "bold"),
+            bg=COLOR_EXITO,
+            fg="#000",
+            relief=tk.RAISED,
+            bd=2,
+            padx=20,
+            pady=10,
+            activebackground=COLOR_ACENTO,
+            cursor="hand2"
+        )
+        btn_confirmar.pack(pady=15, fill=tk.X)
+    
+    btn_siguiente = tk.Button(
+        frame_destino, 
+        text="SIGUIENTE", 
+        command=siguiente_paso, 
+        font=("Arial", 11, "bold"),
+        bg=COLOR_SECUNDARIO,
+        fg=COLOR_TEXTO,
+        relief=tk.RAISED,
+        bd=2,
+        padx=20,
+        pady=10,
+        activebackground=COLOR_ACENTO,
+        activeforeground=COLOR_FONDO,
+        cursor="hand2"
+    )
+    btn_siguiente.pack(pady=15, fill=tk.X)
+
+def ver_historial(cedula):
+    historial = [b for b in boletos if b[1] == cedula]
+    if not historial:
+        messagebox.showinfo("Historial", "No hay compras registradas")
+        return
+    
+    texto = "\n".join(
+        f"{b[6]} | {b[2]} | ${b[3]} | {b[5]}"
+        for b in historial
+    )
+    messagebox.showinfo("Tus Boletos", texto)
+
+def ventana_buscar_historial():
+    win = tk.Toplevel()
+    win.title("Buscar Historial")
+    win.geometry("300x150")
+    
+    tk.Label(win, text="Ingrese cédula (10 dígitos):", font=fuente).pack(pady=5)
+    entry_cedula = tk.Entry(win, font=fuente)
+    entry_cedula.pack(pady=5)
+    
+    def buscar():
+        cedula = entry_cedula.get().strip()
+        if len(cedula) != 10 or not cedula.isdigit():
+            messagebox.showerror("Error", "Cédula inválida")
+            return
+        win.destroy()
+        ver_historial(cedula)
+    
+    tk.Button(win, text="Buscar", command=buscar, font=fuente).pack(pady=10)
+
+# ========== MENÚ PRINCIPAL ========== #
+def ventana_principal():
+    # Cargar todos los datos del sistema desde JSON al iniciar
+    cargar_todos_datos_desde_json()
+    inicializar_asientos()
+    
+    root = tk.Tk()
+    root.title("Terminal de Buses - Sistema de Boletos")
+    root.geometry("700x600")
+    root.config(bg=COLOR_FONDO)
+    
+    # Guardar todos los datos cuando se cierre la ventana
+    def al_cerrar():
+        guardar_todos_datos_en_json()
+        root.destroy()
+    
+    root.protocol("WM_DELETE_WINDOW", al_cerrar)
+    
+    # ===== HEADER DECORATIVO =====
+    frame_header = tk.Frame(root, bg=COLOR_PRIMARIO, height=150)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    # Título principal
+    tk.Label(frame_header, text="TERMINAL DE BUSES", font=("Arial", 24, "bold"), bg=COLOR_PRIMARIO, fg=COLOR_TEXTO).pack(pady=10)
+    tk.Label(frame_header, text="Sistema Integral de Gestión de Boletos", font=("Arial", 10), bg=COLOR_PRIMARIO, fg=COLOR_TEXTO_SECUNDARIO).pack(pady=2)
+    
+    # ===== LÍNEA DECORATIVA =====
+    frame_linea = tk.Frame(root, bg=COLOR_ACENTO, height=2)
+    frame_linea.pack(fill=tk.X, pady=10)
+    frame_linea.pack_propagate(False)
+    
+    # ===== CONTENIDO CENTRAL =====
+    frame_central = tk.Frame(root, bg=COLOR_FONDO)
+    frame_central.pack(pady=30, expand=True, fill=tk.BOTH, padx=50)
+    
+    # Subtítulo
+    tk.Label(frame_central, text="Seleccione una opción:", font=fuente_subtitulo, bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(pady=20)
+    
+    # Boton Cliente
+    btn_cliente = tk.Button(
+        frame_central,
+        text="INGRESO CLIENTE",
+        width=35,
+        command=lambda: [root.destroy(), ventana_cliente_login()],
+        font=("Arial", 11, "bold"),
+        bg=COLOR_SECUNDARIO,
+        fg=COLOR_TEXTO,
+        relief=tk.RAISED,
+        bd=3,
+        padx=20,
+        pady=15,
+        activebackground=COLOR_ACENTO,
+        activeforeground=COLOR_FONDO,
+        cursor="hand2"
+    )
+    btn_cliente.pack(pady=12, fill=tk.X)
+    
+    # Boton Admin
+    btn_admin = tk.Button(
+        frame_central,
+        text="INGRESO ADMINISTRADOR",
+        width=35,
+        command=lambda: [root.destroy(), ventana_login_admin()],
+        font=("Arial", 11, "bold"),
+        bg=COLOR_PRIMARIO_CLARO,
+        fg=COLOR_TEXTO,
+        relief=tk.RAISED,
+        bd=3,
+        padx=20,
+        pady=15,
+        activebackground=COLOR_ACENTO,
+        activeforeground=COLOR_FONDO,
+        cursor="hand2"
+    )
+    btn_admin.pack(pady=12, fill=tk.X)
+    
+    # Boton Salir
+    btn_salir = tk.Button(
+        frame_central,
+        text="SALIR",
+        width=35,
+        command=al_cerrar,
+        font=("Arial", 11, "bold"),
+        bg="#444444",
+        fg=COLOR_TEXTO,
+        relief=tk.RAISED,
+        bd=3,
+        padx=20,
+        pady=15,
+        activebackground="#666666",
+        activeforeground=COLOR_TEXTO,
+        cursor="hand2"
+    )
+    btn_salir.pack(pady=12, fill=tk.X)
+    
+    # ===== FOOTER =====
+    frame_footer = tk.Frame(root, bg=COLOR_PRIMARIO, height=60)
+    frame_footer.pack(fill=tk.X, side=tk.BOTTOM, pady=0)
+    frame_footer.pack_propagate(False)
+    
+    tk.Label(frame_footer, text="© 2026 Sistema Integral de Terminal de Buses", 
+             font=("Arial", 9), bg=COLOR_PRIMARIO, fg=COLOR_TEXTO_SECUNDARIO).pack(pady=10)
+    
+    root.mainloop()
+
+# ========== INICIO ========== #
+if __name__ == "__main__":
+    ventana_principal()
+

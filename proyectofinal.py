@@ -726,3 +726,254 @@ def ver_estado_todos_asientos():
             texto += f"{ruta_horario}: {ocupados}/16 ocupados, {libres}/16 libres\n"
     
     messagebox.showinfo("Estado General de Asientos", texto)
+
+# ========== MÓDULO ADMINISTRADOR ========== #
+def ventana_login_admin():
+    win = tk.Tk()
+    win.title("Login Administrador - Terminal de Buses")
+    win.geometry("500x400")
+    win.config(bg=COLOR_FONDO)
+    
+    # Header
+    frame_header = tk.Frame(win, bg=COLOR_PRIMARIO_CLARO, height=120)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    tk.Label(frame_header, text="ACCESO ADMINISTRADOR", font=("Arial", 18, "bold"), bg=COLOR_PRIMARIO_CLARO, fg=COLOR_TEXTO).pack(pady=10)
+    
+    # Línea decorativa
+    frame_linea = tk.Frame(win, bg=COLOR_ACENTO, height=2)
+    frame_linea.pack(fill=tk.X, pady=10)
+    frame_linea.pack_propagate(False)
+    
+    # Contenido
+    frame = tk.Frame(win, bg=COLOR_FONDO)
+    frame.pack(pady=40, padx=40, fill=tk.BOTH, expand=True)
+    
+    tk.Label(frame, text="ID Administrador:", font=("Arial", 12, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=(10, 10))
+    entry_id = tk.Entry(frame, width=30, font=("Arial", 12), bg=COLOR_FONDO_SECUNDARIO, fg=COLOR_TEXTO, relief=tk.FLAT, bd=5, show="*")
+    entry_id.pack(pady=10, fill=tk.X)
+
+    tk.Label(frame, text="Ingresa tu ID de administrador para continuar", font=("Arial", 9), bg=COLOR_FONDO, fg=COLOR_TEXTO_SECUNDARIO).pack(pady=10)
+
+    def verificar():
+        if entry_id.get() == "admin123":
+            win.destroy()
+            panel_admin()
+        else:
+            messagebox.showerror("Error", " ID incorrecto. Intenta de nuevo.")
+            entry_id.delete(0, tk.END)
+
+    btn = tk.Button(
+        frame,
+        text="INGRESAR",
+        command=verificar,
+        font=("Arial", 12, "bold"),
+        bg=COLOR_PRIMARIO_CLARO,
+        fg=COLOR_TEXTO,
+        relief=tk.RAISED,
+        bd=3,
+        padx=20,
+        pady=12,
+        activebackground=COLOR_ACENTO,
+        activeforeground=COLOR_FONDO,
+        cursor="hand2"
+    )
+    btn.pack(pady=20, fill=tk.X)
+
+def panel_admin():
+    win = tk.Tk()
+    win.title("Panel Administrador - Terminal de Buses")
+    win.geometry("700x800")
+    win.config(bg=COLOR_FONDO)
+    
+    # Header
+    frame_header = tk.Frame(win, bg=COLOR_PRIMARIO_CLARO, height=100)
+    frame_header.pack(fill=tk.X, pady=0)
+    frame_header.pack_propagate(False)
+    
+    tk.Label(frame_header, text="PANEL ADMINISTRADOR", font=("Arial", 20, "bold"), bg=COLOR_PRIMARIO_CLARO, fg=COLOR_TEXTO).pack(pady=10)
+    
+    # Línea decorativa
+    frame_linea = tk.Frame(win, bg=COLOR_ACENTO, height=2)
+    frame_linea.pack(fill=tk.X, pady=5)
+    frame_linea.pack_propagate(False)
+    
+    # Canvas con Scrollbar para los botones
+    canvas = tk.Canvas(win, bg=COLOR_FONDO, highlightthickness=0)
+    scrollbar = tk.Scrollbar(win, orient=tk.VERTICAL, command=canvas.yview)
+    frame_botones = tk.Frame(canvas, bg=COLOR_FONDO)
+    frame_botones.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    canvas.create_window((0, 0), window=frame_botones, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    # Permitir scroll con rueda del mouse
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    botones = [
+        ("Ver rutas y precios", ver_rutas_admin, COLOR_PRIMARIO),
+        ("Ver rutas más baratas", lambda: mostrar_rutas_por_tipo("barata", "Rutas Más Baratas"), COLOR_PRIMARIO),
+        ("Ver rutas más cortas", lambda: mostrar_rutas_por_tipo("corta", "Rutas Más Cortas"), COLOR_PRIMARIO),
+        ("Ver rutas más largas", lambda: mostrar_rutas_por_tipo("larga", "Rutas Más Largas"), COLOR_PRIMARIO),
+        ("Buscar rutas entre ciudades", buscar_ruta_dfs, COLOR_SECUNDARIO),
+        ("Agregar nueva ciudad", agregar_ciudad, COLOR_SECUNDARIO),
+        ("Agregar nueva ruta", agregar_ruta, COLOR_SECUNDARIO),
+        ("Gestionar horarios", gestionar_horarios, COLOR_PRIMARIO_CLARO),
+        ("Ver todos los horarios", ver_todos_horarios, COLOR_PRIMARIO_CLARO),
+        ("Agregar cooperativa", agregar_cooperativa, COLOR_PRIMARIO_CLARO),
+        ("Ver cooperativas", ver_cooperativas, COLOR_PRIMARIO_CLARO),
+        ("Gestionar asientos por ruta", gestionar_asientos_ruta, COLOR_PRIMARIO),
+        ("Ver estado de todos los asientos", ver_estado_todos_asientos, COLOR_PRIMARIO),
+        ("Ver facturas", ver_facturas, COLOR_SECUNDARIO),
+        ("Cerrar sesión", lambda: [win.destroy(), ventana_principal()], "#555555")
+    ]
+
+    for texto, comando, color in botones:
+        btn = tk.Button(
+            frame_botones, 
+            text=texto, 
+            width=45,
+            command=comando, 
+            font=("Arial", 10),
+            bg=color,
+            fg=COLOR_TEXTO,
+            relief=tk.RAISED,
+            bd=2,
+            padx=10,
+            pady=8,
+            activebackground=COLOR_ACENTO,
+            activeforeground=COLOR_FONDO,
+            cursor="hand2"
+        )
+        btn.pack(pady=4, anchor="center")
+
+    # Footer
+    frame_footer = tk.Frame(win, bg=COLOR_PRIMARIO, height=50)
+    frame_footer.pack(fill=tk.X, side=tk.BOTTOM)
+    frame_footer.pack_propagate(False)
+    tk.Label(frame_footer, text="Gestiona la terminal con seguridad y precisión", font=("Arial", 9), bg=COLOR_PRIMARIO, fg=COLOR_TEXTO).pack(pady=15)
+
+def ver_rutas_admin():
+    texto = ""
+    for origen in rutas_matriz:
+        for destino, tiempo in rutas_matriz[origen].items():
+            precio = tiempo * 1.5
+            texto += f"{origen} -> {destino} | {tiempo}h | ${precio:.2f}\n"
+    messagebox.showinfo("Rutas Disponibles", texto)
+
+def agregar_ciudad():
+    ciudad = simpledialog.askstring("Agregar Ciudad", "Nombre de la nueva ciudad:")
+    if ciudad and ciudad not in rutas_matriz:
+        rutas_matriz[ciudad] = {}
+        # Agregar datos básicos para clientes
+        rutas_cliente[ciudad] = {
+            "precio": 10,  # Precio por defecto
+            "cooperativa": "Nueva Cooperativa",
+            "horarios": ["08:00", "16:00"]  # Horarios por defecto
+        }
+        guardar_todos_datos_en_json()
+        messagebox.showinfo("Éxito", f"Ciudad {ciudad} agregada correctamente")
+    elif ciudad in rutas_matriz:
+        messagebox.showerror("Error", "La ciudad ya existe")
+
+def agregar_ruta():
+    ventana = tk.Toplevel()
+    ventana.title("Agregar Ruta")
+    ventana.geometry("300x250")
+    
+    tk.Label(ventana, text="Ciudad Origen:", font=fuente).pack()
+    entry_origen = tk.Entry(ventana, font=fuente)
+    entry_origen.pack()
+    
+    tk.Label(ventana, text="Ciudad Destino:", font=fuente).pack()
+    entry_destino = tk.Entry(ventana, font=fuente)
+    entry_destino.pack()
+    
+    tk.Label(ventana, text="Tiempo de viaje (horas):", font=fuente).pack()
+    entry_tiempo = tk.Entry(ventana, font=fuente)
+    entry_tiempo.pack()
+
+    def guardar_ruta():
+        origen = entry_origen.get().strip()
+        destino = entry_destino.get().strip()
+        tiempo = entry_tiempo.get().strip()
+        
+        if not origen or not destino or not tiempo:
+            messagebox.showerror("Error", "Todos los campos son obligatorios")
+            return
+        
+        try:
+            tiempo = float(tiempo)
+        except ValueError:
+            messagebox.showerror("Error", "El tiempo debe ser un número")
+            return
+        
+        if origen not in rutas_matriz or destino not in rutas_matriz:
+            messagebox.showerror("Error", "Una o ambas ciudades no existen")
+            return
+        
+        # Agregar ruta bidireccional
+        rutas_matriz[origen][destino] = tiempo
+        rutas_matriz[destino][origen] = tiempo
+        
+        # Actualizar asientos para cada horario disponible
+        if destino in rutas_cliente:
+            for horario in rutas_cliente[destino]["horarios"]:
+                clave_ida = f"{origen}-{destino}-{horario}"
+                clave_vuelta = f"{destino}-{origen}-{horario}"
+                if clave_ida not in asientos_por_ruta:
+                    asientos_por_ruta[clave_ida] = generar_matriz_asientos()
+                if clave_vuelta not in asientos_por_ruta:
+                    asientos_por_ruta[clave_vuelta] = generar_matriz_asientos()
+        
+        guardar_todos_datos_en_json()
+        messagebox.showinfo("Éxito", "Ruta agregada correctamente")
+        ventana.destroy()
+
+    tk.Button(ventana, text="Guardar Ruta", command=guardar_ruta, font=fuente).pack(pady=15)
+
+def buscar_ruta_dfs():
+    ventana = tk.Toplevel()
+    ventana.title("Buscar Ruta")
+    ventana.geometry("300x200")
+    
+    tk.Label(ventana, text="Ciudad Origen:", font=fuente).pack()
+    entry_origen = tk.Entry(ventana, font=fuente)
+    entry_origen.pack()
+    
+    tk.Label(ventana, text="Ciudad Destino:", font=fuente).pack()
+    entry_destino = tk.Entry(ventana, font=fuente)
+    entry_destino.pack()
+
+    def buscar():
+        origen = entry_origen.get().strip()
+        destino = entry_destino.get().strip()
+        if not origen or not destino:
+            messagebox.showerror("Error", "Ambos campos son obligatorios")
+            return
+        
+        buscar_rutas_entre_ciudades(origen, destino)
+        ventana.destroy()
+
+    tk.Button(ventana, text="Buscar", command=buscar, font=fuente).pack(pady=10)
+
+def ver_facturas():
+    try:
+        with open("facturas.json", "r") as f:
+            facturas = json.load(f)
+    except:
+        facturas = []
+    
+    if not facturas:
+        messagebox.showinfo("Facturas", "No hay registros")
+        return
+    
+    texto = "\n".join(
+        f"{f['cliente']} | {f['destino']} | ${f['precio']} | {f['fecha']}" 
+        for f in facturas
+    )
+    messagebox.showinfo("Historial de Facturas", texto)

@@ -1166,19 +1166,19 @@ def abrir_menu_cliente(nombre, cedula):
         canvas.yview_scroll(int(-1*(event.delta/120)), "units")
     canvas.bind_all("<MouseWheel>", _on_mousewheel)
     
-    tk.Label(frame, text="📋 MIS OPCIONES", font=("Arial", 12, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=10)
+    tk.Label(frame, text="MIS OPCIONES", font=("Arial", 12, "bold"), bg=COLOR_FONDO, fg=COLOR_ACENTO).pack(anchor=tk.W, pady=10)
     
     botones = [
-        ("🗺️  Ver Destinos", ver_destinos, COLOR_PRIMARIO),
-        ("⏰ Ver Horarios", ver_horarios, COLOR_PRIMARIO),
-        ("🚌 Ver Cooperativas", ver_cooperativa_cliente, COLOR_PRIMARIO),
-        ("💰 Ver Rutas Más Baratas", lambda: mostrar_rutas_por_tipo("barata", "Rutas Más Baratas"), COLOR_PRIMARIO_CLARO),
-        ("⏱️  Ver Rutas Más Cortas", lambda: mostrar_rutas_por_tipo("corta", "Rutas Más Cortas"), COLOR_PRIMARIO_CLARO),
-        ("📏 Ver Rutas Más Largas", lambda: mostrar_rutas_por_tipo("larga", "Rutas Más Largas"), COLOR_PRIMARIO_CLARO),
-        ("🔍 Buscar Rutas entre Ciudades", lambda: buscar_ruta_cliente(), COLOR_SECUNDARIO),
-        ("🎫 COMPRAR BOLETO", lambda: comprar_boleto_ui(nombre, cedula, win), COLOR_EXITO),
-        ("📖 Ver Mi Historial", lambda: ver_historial(cedula), COLOR_SECUNDARIO),
-        ("🚪 Cerrar Sesión", lambda: [win.destroy(), ventana_principal()], "#555555")
+        ("Ver Destinos", ver_destinos, COLOR_PRIMARIO),
+        ("Ver Horarios", ver_horarios, COLOR_PRIMARIO),
+        ("Ver Cooperativas", ver_cooperativa_cliente, COLOR_PRIMARIO),
+        ("Ver Rutas Más Baratas", lambda: mostrar_rutas_por_tipo("barata", "Rutas Más Baratas"), COLOR_PRIMARIO_CLARO),
+        ("Ver Rutas Más Cortas", lambda: mostrar_rutas_por_tipo("corta", "Rutas Más Cortas"), COLOR_PRIMARIO_CLARO),
+        ("Ver Rutas Más Largas", lambda: mostrar_rutas_por_tipo("larga", "Rutas Más Largas"), COLOR_PRIMARIO_CLARO),
+        ("Buscar Rutas entre Ciudades", lambda: buscar_ruta_cliente(), COLOR_SECUNDARIO),
+        ("COMPRAR BOLETO", lambda: comprar_boleto_ui(nombre, cedula, win), COLOR_EXITO),
+        ("Ver Mi Historial", lambda: ver_historial(cedula), COLOR_SECUNDARIO),
+        ("Cerrar Sesión", lambda: [win.destroy(), ventana_principal()], "#555555")
     ]
     
     for texto, comando, color in botones:
@@ -1348,7 +1348,7 @@ def comprar_boleto_ui(nombre, cedula, ventana_padre):
         
         btn_confirmar = tk.Button(
             frame_horario, 
-            text="✅ CONFIRMAR COMPRA", 
+            text="CONFIRMAR COMPRA", 
             command=confirmar_compra, 
             font=("Arial", 11, "bold"),
             bg=COLOR_EXITO,
